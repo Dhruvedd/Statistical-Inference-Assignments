@@ -1,0 +1,430 @@
+---
+title: "Midterm"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-11-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+# Midterm
+
+## Q1)
+
+## a)
+
+To calculate the required sample size to get a margin of error of 0.001 without needing finite population correction, we can use this formula: n = ((z/MOE)\^2) \* p(1-p)
+
+where n is the sample size, MOE is the margin of error, z is the critical value for a given confidence interval, 1.96 if we take 95% confidence interval. p is the estimated proportion, assumed to be 0.5.
+
+If we do the calculations using this, the value n, the sample size comes out to be 960, 400.
+
+## b)
+
+If we repeat the above calculations but take the MOE as 0.01, then the sample size comes out to be 9,604
+
+## Q2)
+
+## a)
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(boot)
+source("D:\\Uni Resources\\Data Science\\Stats Inference\\A5\\fixregday1.pck")
+source("D:\\Uni Resources\\Data Science\\Stats Inference\\A5\\regboot1.pck")
+
+# Assuming 'NOAAGISSWD' is your dataset and has columns 'Year' and 'Severe.Storm.Count'
+weather <- NOAAGISSWD
+
+# Split the dataset into two time periods: before 2000 and 2000 or later
+weather_before_2000 <- weather %>% filter(Year < 2000)
+weather_after_2000 <- weather %>% filter(Year >= 2000)
+
+# Bootstrap function for mean
+bootstrap_mean <- function(data, indices) {
+  d <- data[indices, ]  # Select bootstrap sample
+  mean(d$Severe.Storm.Count, na.rm = TRUE)
+}
+
+# Bootstrap function for median
+bootstrap_median <- function(data, indices) {
+  d <- data[indices, ]  # Select bootstrap sample
+  median(d$Severe.Storm.Count, na.rm = TRUE)
+}
+
+# Set number of bootstrap replications
+n_boot <- 1000
+
+# Calculate bootstrap confidence intervals for the mean before 2000
+boot_mean_before_2000 <- boot(data = weather_before_2000, statistic = bootstrap_mean, R = n_boot)
+ci_mean_before_2000 <- boot.ci(boot_mean_before_2000, type = "perc")
+
+# Calculate bootstrap confidence intervals for the median before 2000
+boot_median_before_2000 <- boot(data = weather_before_2000, statistic = bootstrap_median, R = n_boot)
+ci_median_before_2000 <- boot.ci(boot_median_before_2000, type = "perc")
+
+# Calculate bootstrap confidence intervals for the mean after 2000
+boot_mean_after_2000 <- boot(data = weather_after_2000, statistic = bootstrap_mean, R = n_boot)
+ci_mean_after_2000 <- boot.ci(boot_mean_after_2000, type = "perc")
+
+# Calculate bootstrap confidence intervals for the median after 2000
+boot_median_after_2000 <- boot(data = weather_after_2000, statistic = bootstrap_median, R = n_boot)
+ci_median_after_2000 <- boot.ci(boot_median_after_2000, type = "perc")
+
+# Print results
+cat("95% Confidence Interval for Mean Severe Storms (before 2000):\n")
+print(ci_mean_before_2000)
+
+cat("\n95% Confidence Interval for Median Severe Storms (before 2000):\n")
+print(ci_median_before_2000)
+
+cat("\n95% Confidence Interval for Mean Severe Storms (after 2000):\n")
+print(ci_mean_after_2000)
+
+cat("\n95% Confidence Interval for Median Severe Storms (after 2000):\n")
+print(ci_median_after_2000)
+```
+
+There is a clear trend showing an increase in both the mean and median number of severe storms per year after 2000 compared to before 2000. This implies that severe storms became more frequent in the later years. The results also indicate greater variability in the number of severe storms per year in the post-2000 period, reflected by the wider confidence intervals for both the mean and median.
+
+## b)
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(boot)
+source("D:\\Uni Resources\\Data Science\\Stats Inference\\A5\\fixregday1.pck")
+source("D:\\Uni Resources\\Data Science\\Stats Inference\\A5\\regboot1.pck")
+source("D:\\Uni Resources\\Data Science\\Stats Inference\\Midterm\\regday3.pck")
+
+weather <- NOAAGISSWD
+
+# Split data into before 2000 and after (and including) 2000
+weather_before_2000 <- weather %>% filter(Year < 2000)
+weather_after_2000 <- weather %>% filter(Year >= 2000)
+
+# Define bootstrap function for mean and median
+bootstrap_mean <- function(data, indices) {
+  mean(data[indices], na.rm = TRUE)
+}
+
+bootstrap_median <- function(data, indices) {
+  median(data[indices], na.rm = TRUE)
+}
+
+# Generate 1000 bootstrap replicates and calculate 95% percentile intervals
+set.seed(123) # For reproducibility
+boot_mean_before_2000 <- boot(data = weather_before_2000$Severe.Storm.Count, statistic = bootstrap_mean, R = 1000)
+boot_median_before_2000 <- boot(data = weather_before_2000$Severe.Storm.Count, statistic = bootstrap_median, R = 1000)
+boot_mean_after_2000 <- boot(data = weather_after_2000$Severe.Storm.Count, statistic = bootstrap_mean, R = 1000)
+boot_median_after_2000 <- boot(data = weather_after_2000$Severe.Storm.Count, statistic = bootstrap_median, R = 1000)
+
+# Calculate the percentile bootstrap confidence intervals
+ci_mean_before_2000 <- boot.ci(boot.out = boot_mean_before_2000, type = "perc")
+ci_median_before_2000 <- boot.ci(boot.out = boot_median_before_2000, type = "perc")
+ci_mean_after_2000 <- boot.ci(boot.out = boot_mean_after_2000, type = "perc")
+ci_median_after_2000 <- boot.ci(boot.out = boot_median_after_2000, type = "perc")
+
+# Print the results
+cat("95% Percentile Bootstrap CI for Mean Severe Storms (before 2000):", ci_mean_before_2000$percent[4:5], "\n")
+cat("95% Percentile Bootstrap CI for Median Severe Storms (before 2000):", ci_median_before_2000$percent[4:5], "\n")
+cat("95% Percentile Bootstrap CI for Mean Severe Storms (after 2000):", ci_mean_after_2000$percent[4:5], "\n")
+cat("95% Percentile Bootstrap CI for Median Severe Storms (after 2000):", ci_median_after_2000$percent[4:5], "\n")
+
+# Modified generalized bootstrap function
+generalized.bootstrap <- function(data, stat.func, alpha, nboot.ci = 1000, nboot.sd = 200) {
+  piv.stat <- NULL
+  stat.vec <- NULL
+  
+  # Function to calculate the bootstrap standard deviation
+  boot.sd <- function(x, stat.f) {
+    zvec <- NULL
+    for (i in 1:nboot.sd) {
+      xb1 <- sample(x, replace = TRUE)
+      zvec <- c(zvec, stat.f(xb1))
+    }
+    sd(zvec, na.rm = TRUE)
+  }
+  
+  # Calculate the initial statistic and standard deviation
+  stat0 <- stat.func(data)
+  sd0 <- boot.sd(data, stat.func)
+  
+  # Generate bootstrap samples for confidence intervals
+  for (i in 1:nboot.ci) {
+    xb <- sample(data, replace = TRUE)
+    stat <- stat.func(xb)
+    sdb <- boot.sd(xb, stat.func)
+    # Only add to piv.stat if sdb is not zero or NaN to avoid division issues
+    if (!is.na(sdb) && sdb != 0) {
+      piv.stat <- c(piv.stat, (stat - stat0) / sdb)
+      stat.vec <- c(stat.vec, stat)
+    }
+  }
+  
+  # Calculate the percentile and pivotal confidence intervals
+  bnds <- quantile(piv.stat, c(alpha / 2, 1 - alpha / 2), na.rm = TRUE)
+  perc.bnds <- quantile(stat.vec, c(alpha / 2, 1 - alpha / 2), na.rm = TRUE)
+  CI <- c(stat0 - bnds[2] * sd0, stat0 - bnds[1] * sd0)
+  
+  list(stat = stat0, sd = sd0, pivotal = CI, percentile = perc.bnds)
+}
+
+# Calculating the pivotal bootstrap confidence intervals
+# For Mean Severe Storms (before 2000)
+piv_ci_mean_before_2000 <- generalized.bootstrap(weather_before_2000$Severe.Storm.Count, mean, alpha = 0.05)
+cat("95% Pivotal Bootstrap CI for Mean Severe Storms (before 2000):", piv_ci_mean_before_2000$pivotal, "\n")
+
+# For Median Severe Storms (before 2000)
+piv_ci_median_before_2000 <- generalized.bootstrap(weather_before_2000$Severe.Storm.Count, median, alpha = 0.05)
+cat("95% Pivotal Bootstrap CI for Median Severe Storms (before 2000):", piv_ci_median_before_2000$pivotal, "\n")
+
+# For Mean Severe Storms (after 2000)
+piv_ci_mean_after_2000 <- generalized.bootstrap(weather_after_2000$Severe.Storm.Count, mean, alpha = 0.05)
+cat("95% Pivotal Bootstrap CI for Mean Severe Storms (after 2000):", piv_ci_mean_after_2000$pivotal, "\n")
+
+# For Median Severe Storms (after 2000)
+piv_ci_median_after_2000 <- generalized.bootstrap(weather_after_2000$Severe.Storm.Count, median, alpha = 0.05)
+cat("95% Pivotal Bootstrap CI for Median Severe Storms (after 2000):", piv_ci_median_after_2000$pivotal, "\n")
+```
+
+Both the mean and median confidence intervals for severe storms have increased after 2000, as indicated by both bootstrap methods. This analysis again suggests that severe storms have become more common in the years after 2000 compared to the years prior. The results from both the percentile and pivotal bootstrap intervals are generally consistent, providing additional confidence in the observed trend and matching the previous analysis as well.
+
+## c)
+
+```{r}
+# Load necessary libraries
+library(tidyverse)
+library(dplyr)
+library(infer)
+source("D:\\Uni Resources\\Data Science\\Stats Inference\\A5\\fixregday1.pck")
+source("D:\\Uni Resources\\Data Science\\Stats Inference\\A5\\regboot1.pck")
+source("D:\\Uni Resources\\Data Science\\Stats Inference\\Midterm\\regday3.pck")
+
+# Load the data
+weather <- NOAAGISSWD
+
+# Add a new column to categorize the data into periods before 2000 and after (and including) 2000
+weather <- weather %>%
+  mutate(Period = ifelse(Year < 2000, "Before 2000", "After 2000"))
+
+# Observed difference in means for All.Disasters.Count between the two periods
+observed_diff <- weather %>%
+  group_by(Period) %>%
+  summarize(mean_all_disasters = mean(All.Disasters.Count)) %>%
+  summarize(obs_diff = diff(mean_all_disasters))
+
+# Perform a permutation test to calculate the p-value for the difference in means
+set.seed(123) # For reproducibility
+perm_test <- weather %>%
+  specify(All.Disasters.Count ~ Period) %>%        # Specify the response and explanatory variables
+  hypothesize(null = "independence") %>%           # Specify the null hypothesis
+  generate(reps = 100000, type = "permute") %>%      # Generate permutation replicates
+  calculate(stat = "diff in means", order = c("After 2000", "Before 2000")) # Calculate the test statistic
+
+# Calculate the p-value based on the observed difference
+p_value <- perm_test %>%
+  get_p_value(obs_stat = observed_diff$obs_diff, direction = "two-sided")
+
+# Display the results
+cat("Observed difference in means for All.Disasters.Count:", observed_diff$obs_diff, "\n")
+cat("P-value for difference in means between periods before and after 2000:", p_value$p_value, "\n")
+
+
+```
+
+A p-value of less 0.00001 provides strong evidence against the null hypothesis. This suggests that the average number of all disasters before and after 2000 is not equal, with a significant increase after 2000.
+
+## d)
+
+The bootstrap confidence intervals suggest an increase when comparing the data from before 2000 to after 2000, implying that severe storms became more frequent in later years.
+
+The pvalue we measured for all disasters, also reports that the there is a statistically significant difference in the number of average disasters per year when comparing the years before and after 2000, with the years after 2000 having a higher frequency of disasters on average.
+
+This highlights that not only did severe storms increased in frequency, all disasters increased in frequency when comparing the years before to the years after 2000. All the methods give rough agreement.
+
+## Q3)
+
+## a)
+
+```{r}
+# Define the values for x from 0 to 100
+x_values <- 0:100
+
+# Calculate the likelihood ratios for each x
+likelihood_ratios <- dpois(x_values, 20) / ((dpois(x_values, 10) + dpois(x_values, 40)) / 2)
+
+# Combine x values with their corresponding likelihood ratios into a data frame
+likelihood_data <- data.frame(x = x_values, likelihood_ratio = likelihood_ratios)
+
+# Display the likelihood ratios and corresponding x values in ascending order of x
+print(likelihood_data)
+```
+
+## b)
+
+```{r}
+# Calculate likelihood ratios for x values from 0 to 100
+x_values <- 0:100
+likelihood_ratios <- dpois(x_values, 20) / ((dpois(x_values, 10) + dpois(x_values, 40)) / 2)
+
+# Calculate null hypothesis probabilities (denominator region)
+null_probs <- (dpois(x_values, 10) + dpois(x_values, 40)) / 2
+
+# Combine x values, likelihood ratios, and null probabilities into a data frame
+data <- data.frame(x = x_values, likelihood_ratio = likelihood_ratios, null_prob = null_probs)
+
+# Sort data by likelihood ratio in descending order
+data <- data[order(-data$likelihood_ratio), ]
+
+# Initialize cumulative probability and interval of x-values
+cumulative_prob <- 0
+interval_x_values <- c()
+
+# Loop through sorted data and accumulate null probabilities
+for (i in seq_along(data$x)) {
+  x_value <- data$x[i]
+  prob <- data$null_prob[i]
+  
+  # Check if adding the next probability would exceed 0.05
+  if (cumulative_prob + prob > 0.05) {
+    break
+  }
+  
+  # Add x value to interval and update cumulative probability
+  interval_x_values <- c(interval_x_values, x_value)
+  cumulative_prob <- cumulative_prob + prob
+}
+
+# Result
+cat("Interval of x-values:", interval_x_values, "\n")
+cat("Cumulative probability for this interval:", cumulative_prob, "\n")
+
+```
+
+We will sort by the likelihood ratio in descending and starting from the highest likelihood ratio, we add
+
+x-values until the cumulative probability under the null hypothesis reaches or is as close as possible to 0.05 without exceeding it.
+
+## c)
+
+```{r}
+# Calculate the upper tail for Poisson(10)
+upper_tail_poisson10 <- qpois(1 - 0.025, 10)
+
+# Calculate the lower tail for Poisson(40)
+lower_tail_poisson40 <- qpois(0.025, 40)
+
+# Display the interval for the Poisson 10 and 40 tails
+cat("Interval from upper tail of Poisson(10) and lower tail of Poisson(40):", 
+    lower_tail_poisson40, "to", upper_tail_poisson10, "\n")
+
+# Calculate cumulative probabilities within this interval for the null hypothesis distribution
+# The null hypothesis distribution is the mixture of Poisson(10) and Poisson(40)
+null_distribution <- (dpois(x_values, 10) + dpois(x_values, 40)) / 2
+
+# Calculate cumulative probability within this interval
+cumulative_prob_interval <- sum(null_distribution[lower_tail_poisson40:upper_tail_poisson10])
+
+# Display cumulative probability for the interval
+cat("Cumulative probability for this interval under the null distribution:", cumulative_prob_interval, "\n")
+
+# Compare with the cumulative probability found in part (b)
+cat("Difference in cumulative probability from the 0.05 target in part (b):", abs(0.05 - cumulative_prob_interval), "\n")
+
+```
+
+Interval from part (b): Had a cumulative probability of 0.039, which is closer to 0.05 but not strictly constructed from tail probabilities. The Interval from tail approach has a cumulative probability of 0.034, missing the 0.05 target by a slightly larger margin and potentially being more conservative.
+
+## d)
+
+```{r}
+# Define the interval obtained in part (b)
+interval_x_values <- c(22, 21, 23, 20, 24, 19, 25, 18, 26, 17, 27, 16, 28)
+
+# Calculate the probability of each x value in the interval under the alternative hypothesis (Poisson(20))
+alternative_probabilities <- dpois(interval_x_values, 20)
+
+# Calculate the cumulative probability (power) for the interval under the alternative hypothesis
+power <- sum(alternative_probabilities)
+
+# Display the power
+cat("Power of the likelihood ratio test:", power, "\n")
+
+```
+
+The calculated power of 0.809 indicates an 80.9% probability that the likelihood ratio test will correctly reject the null hypothesis when the alternative hypothesis is true, demonstrating the test's effectiveness.
+
+## Q4)
+
+## a)
+
+```{r}
+library(tidyverse)
+library(ISLR)
+
+# Load the NCI60 dataset
+data("NCI60")
+gene_expression <- NCI60$data
+cancer_types <- NCI60$labs
+
+# Identify indices for each cancer type
+melanoma_indices <- which(cancer_types == "MELANOMA")
+colon_indices <- which(cancer_types == "COLON")
+
+# Function to find interesting genes
+find_interesting_genes <- function(indices, gene_expression, fdr_threshold = 0.2) {
+  p_values <- apply(gene_expression, 2, function(gene) {
+    t_test_result <- tryCatch(
+      t.test(gene[indices], gene[-indices])$p.value,
+      error = function(e) NA
+    )
+    return(t_test_result)
+  })
+  
+  # Remove NA values before FDR adjustment
+  valid_p_values <- p_values[!is.na(p_values)]
+  valid_genes <- names(valid_p_values)
+  
+  # Adjust p-values for FDR
+  fdr_adjusted <- p.adjust(valid_p_values, method = "fdr")
+  
+  # Filter for genes meeting the FDR threshold
+  interesting_genes <- valid_genes[fdr_adjusted <= fdr_threshold]
+  
+  # Return the list of interesting genes
+  return(interesting_genes)
+}
+
+# Find interesting genes for Melanoma and Colon cancer
+interesting_genes_melanoma <- find_interesting_genes(melanoma_indices, gene_expression, fdr_threshold = 0.2)
+interesting_genes_colon <- find_interesting_genes(colon_indices, gene_expression, fdr_threshold = 0.2)
+
+# Find the common interesting genes between Melanoma and Colon cancer
+common_genes <- intersect(interesting_genes_melanoma, interesting_genes_colon)
+
+# Print the number of interesting genes for each cancer and the common genes
+cat("Number of interesting genes for Melanoma:", length(interesting_genes_melanoma), "\n")
+cat("Number of interesting genes for Colon Cancer:", length(interesting_genes_colon), "\n")
+```
+
+In the NCI60 dataset, there probably a lack of independence in genes from the same cell, as genes involved in cancer-related pathways are often co-regulated.
+
+Statistically, this dependence means that FDR corrections assuming independence may not accurately control the false discovery rate.
+
+## b)
+
+```{r}
+cat("Number of common interesting genes between Melanoma and Colon Cancer:", length(common_genes), "\n")
+
+# Print the list of common interesting genes
+cat("Common interesting genes between Melanoma and Colon Cancer:\n")
+print(unique(common_genes))
+```
+
+The list of gene indices provided shows the genes that are flagged as interesting (significantly associated with either Melanoma or Colon Cancer) and that are common to both cancers. This means these genes have passed the False Discovery Rate (FDR) threshold in both cases, suggesting they might be biologically relevant in the context of both Melanoma and Colon Cancer.

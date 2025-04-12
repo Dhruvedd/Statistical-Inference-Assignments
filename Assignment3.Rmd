@@ -1,0 +1,60 @@
+---
+title: "Assignment3"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-10-15"
+---
+
+# Drought and Wildfire
+
+## Drought:
+
+```{r}
+summary(NOAAGISSWD)
+
+# for Drought as Y variablees as binomial functions using the logit link
+drought_year <- glm(Drought.Count~Year, data = NOAAGISSWD, family = binomial(link = logit))
+drought_temp <- glm(Drought.Count~delta.temp, data = NOAAGISSWD, family = binomial(link = logit))
+drought_yearptemp <- glm(Drought.Count~delta.temp + Year, data = NOAAGISSWD, family = binomial(link = logit))
+drought_yearttemp <- glm(Drought.Count~delta.temp * Year, data = NOAAGISSWD, family = binomial(link = logit))
+
+
+summary(drought_year)
+#Akaike score = 51.153. Null devience = 53.413 (43 degrees of freedom), Residual deviance = 47.153(42 degrees of freedom)
+
+summary(drought_temp)
+#Akaike score = 51.335. Null devience = 53.413 (43 degrees of freedom), Residual deviance = 47.335(42 degrees of freedom)
+
+summary(drought_yearptemp)
+#Akaike score = 52.995. Null devience = 53.413 (43 degrees of freedom), Residual deviance = 46.995(41 degrees of freedom)
+
+summary(drought_yearttemp)
+#Akaike score = 54.529. Null devience = 53.413 (43 degrees of freedom), Residual deviance = 46.529(40 degrees of freedom)
+```
+
+As is evident from the AICs and deviances, for droughts, the best models turn out to be the ones with year only and the one with year + delta temperature. The AIC for year is the lowest of all the models, but AIC for year + temp is only slightly higher while also having a slightly better deviance, which indicates that it could be better fit. Both models seem to be close to equally compatible with the data.
+
+## Wildfire:
+
+```{r}
+# for wild fire as Y variablees as binomial functions using the logit link
+wildfire_year <- glm(Wildfire.Count~Year, data = NOAAGISSWD, family = binomial(link = logit))
+wildfire_temp <- glm(Wildfire.Count~delta.temp, data = NOAAGISSWD, family = binomial(link = logit))
+wildfire_yearptemp <- glm(Wildfire.Count~delta.temp + Year, data = NOAAGISSWD, family = binomial(link = logit))
+wildfire_yearttemp <- glm(Wildfire.Count~delta.temp * Year, data = NOAAGISSWD, family = binomial(link = logit))
+
+summary(wildfire_year)
+#Akaike score = 47.787. Null devience = 60.997 (43 degrees of freedom), Residual deviance = 43.787(42 degrees of freedom)
+
+summary(wildfire_temp)
+#Akaike score = 49.406. Null devience = 60.997 (43 degrees of freedom), Residual deviance = 45.406(42 degrees of freedom)
+
+summary(wildfire_yearptemp)
+#Akaike score = 49.748. Null devience = 60.997 (43 degrees of freedom), Residual deviance = 43.748(41 degrees of freedom)
+
+summary(wildfire_yearttemp)
+#Akaike score = 51.717. Null devience = 60.997 (43 degrees of freedom), Residual deviance = 43.717(40 degrees of freedom)
+```
+
+From the results we can interpret that that the model with year only is the best one out of all of these. It has the lowest AIC out of all the models. While the model performs slightly worse than the year + temp and year \* temp models in terms of deviance, the difference is minimal and not nearly as significant as the difference AIC is. Hence, the model with year only is the best one.

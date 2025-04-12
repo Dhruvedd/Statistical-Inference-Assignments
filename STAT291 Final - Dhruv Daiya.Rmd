@@ -1,0 +1,690 @@
+---
+title: "STAT291 Final - Dhruv Daiya"
+output: html_document
+date: "2024-12-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Final
+
+## Question 1:
+
+![](question1.png)
+
+## Question 2
+
+```{r}
+# Define the contingency table as a matrix in R:
+contingency <- matrix(c(148, 274,
+                        276, 2626),
+                      nrow = 2, byrow = TRUE)
+
+# Optional: Assign row and column names for clarity
+rownames(contingency) <- c("First period: quake", "First period: no quake")
+colnames(contingency) <- c("Second period: quake", "Second period: no quake")
+
+# Print the table
+print(contingency)
+
+# Perform the chi-square test of independence
+test_result <- chisq.test(contingency, correct = FALSE)  # 'correct=FALSE' avoids Yates correction for a 2x2
+print(test_result)
+
+```
+
+Since the p-value is **far** below 0.01, we **reject** the null hypothesis of independence. This provides strong evidence that an earthquake occurring in one time period is *not* independent of whether an earthquake happens in the following time period.
+
+**Which cells have higher than expected occurrence if independence is true?**
+
+**2 cells that turned out to be higher than expected under the hypothesis of independence:**
+
+1.  **First period quake, second period quake:** Difference 148−53.8) ≈+94.2
+2.  **First period no quake, second period no quake:** Difference 2626−2532) ≈+94
+
+So this means that earthquakes happening in one time period are not independent of happening in next time period at 0.01 significance level. Earthquakes are more likely to be followed by earthquakes. On the other hand periods without earthquake are more likely to be followed by no earthquakes.
+
+## Question 3
+
+```{r}
+# Construct the matrix
+contingency_new <- matrix(c(5, 314,
+                            314, 2691),
+                          nrow = 2, byrow = TRUE)
+
+rownames(contingency_new) <- c("First period: quake", "First period: no quake")
+colnames(contingency_new) <- c("Second period: quake", "Second period: no quake")
+
+# Print the table for verification
+print(contingency_new)
+
+# Perform the chi-square test (without continuity correction)
+test_result_new <- chisq.test(contingency_new, correct = FALSE)
+print(test_result_new)
+
+```
+
+Since the p-value is far below 0.01, we **reject** the null hypothesis of independence at the 1% level. Even with these different earthquake types (and the smaller quake, quake,quake cell count of 5), there remains statistically strong evidence that an earthquake in one time period is *not* independent of whether one occurs in the following period.
+
+**How do the deviations from expectation under independence differ from the chart in problem 2:**
+
+**Problem 2 Pattern (Same‐Type Quakes)**
+
+-   **(quake, quake):** **Positive** deviation (observed \> expected)
+
+-   **(quake, no quake):** Negative deviation
+
+-   **(no quake, quake):** Negative deviation
+
+-   **(no quake, no quake):** Positive deviation
+
+Hence, in Problem 2, having a quake in the first period **increases** (relative to expectation) the odds of having a quake in the second period, and likewise no quake in the first period **increases** the odds of no quake in the second period.
+
+**Problem 3 Pattern (Different‐Type Quakes)**
+
+**Based on the new counts:**
+
+1.  **(quake, quake)** actually shows a **negative** deviation (observed \< expected).
+
+2.  **(quake, no quake)** is **positive** (observed \> expected).
+
+3.  **(no quake, quake)** is **positive**,
+
+4.  **(no quake, no quake)** is **negative**.
+
+The two cells that are **higher** than expected (by about +25.6) are:
+
+-   (First‐period quake, Second‐period no quake)
+
+-   (First‐period no quake, Second‐period quake)
+
+The two cells that are **lower** than expected (by about −25.6) are:
+
+-   (First‐period quake, Second‐period quake)
+
+-   (First‐period no quake, Second‐period no quake)
+
+**what do these differences mean in terms of the way the two types of earthquakes interact**.
+
+In **Problem 2** (same‐type quakes), having a quake in one period *increases* the chance of another quake in the next period, indicating they **reinforce** each other.\
+In **Problem 3** (different‐type quakes), having a quake in the first period now **lowers** (relative to the independence expectation) the chance of a quake in the second period, and raises the chance of “no quake” in the second period instead. Meaning that after a quake, getting the same quake in the next period is more likely than getting a different quake. **earthquakes do not happen consecutively** or are of different types.
+
+## Question 4
+
+### A) Identify the cancer types with more than 3 cell lines present.
+
+### B) From those Identify cancers with hyper or hypo active genes at the 0.2 FDR level (not independent)
+
+### C) Identify common genes between every pair of the cancers identified in b.
+
+### D) Are there any genes shared as strangely active between 3 cancers?
+
+```{r}
+# Load required libraries
+library(ISLR)
+library(dplyr)
+
+
+#Part(a)
+
+# Load NCI60 dataset
+data(NCI60)
+
+# Part (a): Count cancer types with more than 3 cell lines
+NCI60_data <- NCI60$labs  # Extract cancer type labels
+cancer_counts <- table(NCI60_data)
+
+# Identify cancer types with more than 3 cell lines
+cancer_types_gt3 <- cancer_counts[cancer_counts > 3]
+
+# Print results for 4a
+cat("\nCancer Types with More Than 3 Cell Lines:\n")
+print(cancer_types_gt3)
+
+#=============================================================================
+
+#Part(b)
+
+X <- NCI60$data    # Gene expression matrix
+labels <- NCI60$labs
+fdr_threshold <- 0.2
+
+# Results list to store hyper/hypo-active genes for each cancer type
+results_list <- list()
+
+# Loop through cancer types identified in 4a
+for (ct in names(cancer_types_gt3)) {
+  cat("\nAnalyzing Cancer Type:", ct, "\n")
+  
+  # Indices for this cancer type and others
+  group_ind <- which(labels == ct)
+  other_ind <- which(labels != ct)
+  
+  # Perform two-sample t-tests for each gene
+  pvals <- apply(X, 2, function(gene_values) {
+    t.test(gene_values[group_ind], gene_values[other_ind])$p.value
+  })
+  
+  # Adjust p-values for multiple comparisons using FDR
+  fdr_adj <- p.adjust(pvals, method = "fdr")
+  
+  # Identify significant genes at the 0.2 FDR level
+  sig_genes <- which(fdr_adj < fdr_threshold)
+  
+  # Calculate mean expression in the cancer group and the other group
+  group_means <- colMeans(X[group_ind, ])
+  other_means <- colMeans(X[other_ind, ])
+  
+  # Determine hyper and hypoactive genes
+  hyper_genes <- sig_genes[group_means[sig_genes] > other_means[sig_genes]]
+  hypo_genes <- sig_genes[group_means[sig_genes] < other_means[sig_genes]]
+  
+  # Store the results
+  results_list[[ct]] <- list(
+    total_significant_genes = length(sig_genes),
+    hyper_gene_indices = hyper_genes,
+    hypo_gene_indices = hypo_genes
+  )
+  
+  # Print summary results
+  cat("Number of significant genes at FDR <", fdr_threshold, ":", length(sig_genes), "\n")
+  cat("Hyper-active genes:", length(hyper_genes), "\n")
+  cat("Hypo-active genes:", length(hypo_genes), "\n")
+}
+
+#=============================================================================
+
+#Part(c)
+
+# List of cancer types from results_list
+cancer_types <- names(results_list)
+
+# Initialize a list to store pairwise intersections
+pairwise_intersections <- list()
+
+# Loop over each unique pair of cancer types
+for (i in 1:(length(cancer_types) - 1)) {
+  for (j in (i + 1):length(cancer_types)) {
+    ct1 <- cancer_types[i]
+    ct2 <- cancer_types[j]
+    
+    # Extract all significant genes (union of hyper and hypo) for each cancer type
+    ct1_all_sig <- union(results_list[[ct1]]$hyper_gene_indices, 
+                         results_list[[ct1]]$hypo_gene_indices)
+    ct2_all_sig <- union(results_list[[ct2]]$hyper_gene_indices, 
+                         results_list[[ct2]]$hypo_gene_indices)
+    
+    # Find the intersection (common genes)
+    common_genes <- intersect(ct1_all_sig, ct2_all_sig)
+    
+    # Store the intersection
+    pairwise_intersections[[paste0(ct1, "_", ct2)]] <- list(
+      num_common_genes = length(common_genes),
+      common_genes = common_genes
+    )
+  }
+}
+
+# Print a summary of the common genes for each pair of cancer types
+cat("\nCommon Significant Genes Between Each Pair of Cancer Types:\n")
+for (pair in names(pairwise_intersections)) {
+  cat("\nPair:", pair, "\n")
+  cat("Number of common significant genes:", pairwise_intersections[[pair]]$num_common_genes, "\n")
+  cat("List of common genes(upto the first 10):\n")
+  print(head(pairwise_intersections[[pair]]$common_genes, 10))
+}
+
+#=============================================================================
+
+#Part(d)
+
+cancer_types <- names(results_list)
+
+# Extract all significant genes for each cancer type if not already done
+if(!exists("all_sig_genes")){
+  all_sig_genes <- lapply(cancer_types, function(ct) {
+    union(results_list[[ct]]$hyper_gene_indices, results_list[[ct]]$hypo_gene_indices)
+  })
+  names(all_sig_genes) <- cancer_types
+}
+
+# Generate all combinations of three cancer types
+triplets <- combn(cancer_types, 3)
+
+# Initialize a list to store triple intersections
+triple_intersections <- list()
+
+# Also prepare a data frame to store all triple intersection genes for later analysis
+triplet_gene_data <- data.frame(
+  Triplet = character(),
+  Gene = integer(),
+  stringsAsFactors = FALSE
+)
+
+for (k in 1:ncol(triplets)) {
+  ct_set <- triplets[, k]
+  
+  # Extract significant gene sets for the three cancer types
+  set1 <- all_sig_genes[[ct_set[1]]]
+  set2 <- all_sig_genes[[ct_set[2]]]
+  set3 <- all_sig_genes[[ct_set[3]]]
+  
+  # Find the intersection among the three sets
+  common_genes_three <- Reduce(intersect, list(set1, set2, set3))
+  
+  # Store if any common genes are found
+  if (length(common_genes_three) > 0) {
+    trip_name <- paste(ct_set, collapse = "_")
+    triple_intersections[[trip_name]] <- common_genes_three
+    
+    # Add all these genes to the data frame
+    new_rows <- data.frame(
+      Triplet = rep(trip_name, length(common_genes_three)),
+      Gene = common_genes_three,
+      stringsAsFactors = FALSE
+    )
+    triplet_gene_data <- rbind(triplet_gene_data, new_rows)
+  }
+}
+
+# Print the results as before
+cat("\nCommon Significant Genes Shared by Three Cancer Types:\n")
+if (length(triple_intersections) == 0) {
+  cat("No genes are significantly active (hyper or hypo) in any three cancer types simultaneously.\n")
+} else {
+  for (trip in names(triple_intersections)) {
+    cat("\nTriplet:", trip, "\n")
+    cat("Number of genes shared:", length(triple_intersections[[trip]]), "\n")
+    cat("List of first 10 shared genes:\n")
+    print(head(triple_intersections[[trip]], 10))
+  }
+}
+
+# Find the top genes that appear most frequently across all triplets
+
+# Calculate total unique genes across all triplets
+unique_genes <- unique(triplet_gene_data$Gene)
+
+# Print the total number of unique genes
+cat("\nTotal number of genes active across one or more triplets:", length(unique_genes), "\n")
+
+gene_frequency <- as.data.frame(table(triplet_gene_data$Gene))
+colnames(gene_frequency) <- c("Gene", "Frequency")
+
+# Filter genes that appear in multiple triplets (e.g., at least in 2 or more)
+strangely_active_genes <- gene_frequency[gene_frequency$Frequency > 1, ]
+
+# Sort the strangely active genes by frequency in descending order
+strangely_active_genes <- strangely_active_genes[order(-strangely_active_genes$Frequency), ]
+
+# Print results
+cat("\nList of Strangely Active Genes (Top 10 by Frequency):\n")
+print(head(strangely_active_genes, 10))
+
+```
+
+## Question 5
+
+#### \*\*The diabetes data set is a prospective study of onset of adult diabetes given
+
+a number of risk factors among the Pima Indian tribe. Using the diabetes.csv data set (100)\*\*
+
+### 
+
+A. Separate the first half of the data from the second half, use the first half for training, second for testing
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(randomForest)
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Read the diabetes dataset
+diabetes <- read.csv("D:\\Uni Resources\\Data Science\\Stats Inference\\Final\\diabetes.csv", header = TRUE)
+
+# Split the data into training and testing
+n <- nrow(diabetes)
+half <- floor(n / 2)
+train_data <- diabetes[1:half, ]
+test_data <- diabetes[(half + 1):n, ]
+
+cat("Number of observations in training set:", nrow(train_data), "\n")
+cat("Number of observations in testing set:", nrow(test_data), "\n")
+```
+
+### 
+
+B. Using the training data i. Construct the full logistic regression model for outcome
+
+```{r}
+# Full logistic regression model
+full_model <- glm(Outcome ~ ., data = train_data, family = binomial)
+
+cat("\n--- Full Logistic Regression Model ---\n")
+print(summary(full_model))
+```
+
+A logistic regression (glm) was fitted using all available predictors in the training set. This “full model” estimates the relationship between the predictors (e.g., Glucose, BMI, etc.) and the binary Outcome (diabetes vs. no diabetes). The summary output shows which predictors initially appear most strongly associated with diabetes risk.
+
+### ii. Using backwards selection construct the logistic regression
+
+model with every p value for the coefficients \< .05 (Show Steps!!!)
+
+```{r}
+# Backward selection
+current_model <- full_model
+cat("\n--- Backward Selection Process ---\n")
+
+while (TRUE) {
+  model_summary <- summary(current_model)
+  p_values <- coef(model_summary)[, "Pr(>|z|)"]
+  p_values <- p_values[names(p_values) != "(Intercept)"]
+  
+  max_p <- max(p_values)
+  if (max_p < 0.05) {
+    cat("\nAll remaining predictors have p-values < 0.05. Backward selection is complete.\n")
+    break
+  }
+  
+  predictor_to_remove <- names(p_values)[which.max(p_values)]
+  cat("Removing predictor:", predictor_to_remove, "with p-value:", max_p, "\n")
+  
+  new_formula <- update(formula(current_model), paste(". ~ . -", predictor_to_remove))
+  current_model <- glm(new_formula, data = train_data, family = binomial)
+}
+
+cat("\n--- Final Model After Backward Selection ---\n")
+print(summary(current_model))
+```
+
+Starting from the full model, predictors with p-values above 0.05 were iteratively removed. The code outputs each removal step. Ultimately, four predictors remained significant: **Pregnancies**, **Glucose**, **BMI**, and **DiabetesPedigreeFunction**. This reduced model is more parsimonious, focusing on the strongest predictors of diabetes (all with p \< 0.05).
+
+### C. Predict the “response” (eg type=”response”) for the full logistic
+
+regression model for
+
+### i. the training data set
+
+### ii. the test data set
+
+### D. Predict the “response” for the smallest logistic model from the
+
+backwards selection exercise
+
+### 
+
+i.  the training data set
+ii. the test data set
+
+```{r}
+# Predictions for training and testing data
+train_predictions_full <- predict(full_model, newdata = train_data, type = "response")
+test_predictions_full <- predict(full_model, newdata = test_data, type = "response")
+
+train_predictions_final <- predict(current_model, newdata = train_data, type = "response")
+test_predictions_final <- predict(current_model, newdata = test_data, type = "response")
+
+cat("\nSummary of predictions on the training data (Full Model):\n")
+print(summary(train_predictions_full))
+
+cat("\nSummary of predictions on the testing data (Full Model):\n")
+print(summary(test_predictions_full))
+
+cat("\nSummary of predictions on the training data (Final Model):\n")
+print(summary(train_predictions_final))
+
+cat("\nSummary of predictions on the testing data (Final Model):\n")
+print(summary(test_predictions_final))
+```
+
+### C)
+
+Using type = "response", we calculated predicted probabilities of diabetes for every observation in the training set **from the original full model**. The summary of these predictions shows a range from near 0 up to nearly 1, indicating variable estimated risks of having diabetes.
+
+We generated the same style of predictions for the test set. This lets us compare how well the full model generalizes to unseen data. The summary again indicates a wide range of probabilities, reflecting different levels of predicted risk.
+
+### D)
+
+After backward selection, we predict on the training and testing data with the four-variable model. The summary of these probabilities is similar to the full model’s but may differ slightly, highlighting how removing non-significant predictors can shift predicted outcomes.
+
+### E. Using random forest, build a model on the training data
+
+```{r}
+# Fit a random forest model
+train_data$Outcome <- factor(train_data$Outcome)
+test_data$Outcome <- factor(test_data$Outcome)
+
+rf_model <- randomForest(
+  Outcome ~ .,
+  data = train_data,
+  importance = TRUE
+)
+
+cat("\n--- Random Forest Model ---\n")
+print(rf_model)
+
+# Random forest variable importance
+cat("\nVariable Importance from Random Forest:\n")
+print(importance(rf_model))
+varImpPlot(rf_model)
+```
+
+By converting Outcome to a factor, we ensure a **classification** random forest. The code outputs an OOB (out-of-bag) error rate of about 29.43% and provides a confusion matrix for the training data. This indicates how often the random forest misclassifies individuals. Variable importance measures and plots (importance(rf_model) and varImpPlot(rf_model)) give insight into which features the random forest relies on most when predicting diabetes.
+
+### F. You now have 3 models, Full Logistic, smallest logistic, and random
+
+forest. For predictions of each calculate and tabulate i. Number of correct positives ii. Number of False positives iii. Number of correct negatives iv. Number of false negatives.
+
+```{r}
+# Confusion matrix stats function
+get_confusion_stats <- function(pred, actual) {
+  conf <- table(pred, actual)
+  TP <- if ("1" %in% rownames(conf) && "1" %in% colnames(conf)) conf["1", "1"] else 0
+  FP <- if ("1" %in% rownames(conf) && "0" %in% colnames(conf)) conf["1", "0"] else 0
+  TN <- if ("0" %in% rownames(conf) && "0" %in% colnames(conf)) conf["0", "0"] else 0
+  FN <- if ("0" %in% rownames(conf) && "1" %in% colnames(conf)) conf["0", "1"] else 0
+  return(c(TP = TP, FP = FP, TN = TN, FN = FN))
+}
+
+# Predictions for all models on the test set
+test_pred_prob_full <- predict(full_model, newdata = test_data, type = "response")
+test_pred_class_full <- factor(ifelse(test_pred_prob_full > 0.5, "1", "0"), levels = c("0", "1"))
+
+test_pred_prob_final <- predict(current_model, newdata = test_data, type = "response")
+test_pred_class_final <- factor(ifelse(test_pred_prob_final > 0.5, "1", "0"), levels = c("0", "1"))
+
+test_pred_class_rf <- predict(rf_model, newdata = test_data, type = "class")
+
+truth <- test_data$Outcome
+
+# Confusion stats for all models
+full_stats <- get_confusion_stats(test_pred_class_full, truth)
+final_stats <- get_confusion_stats(test_pred_class_final, truth)
+rf_stats <- get_confusion_stats(test_pred_class_rf, truth)
+
+results <- data.frame(
+  Model = c("Full Logistic", "Final Logistic", "Random Forest"),
+  TP = c(full_stats["TP"], final_stats["TP"], rf_stats["TP"]),
+  FP = c(full_stats["FP"], final_stats["FP"], rf_stats["FP"]),
+  TN = c(full_stats["TN"], final_stats["TN"], rf_stats["TN"]),
+  FN = c(full_stats["FN"], final_stats["FN"], rf_stats["FN"])
+)
+
+cat("\n--- Confusion Matrix Statistics ---\n")
+print(results)
+```
+
+-   **Correct Positives (TP):** Full and reduced logistic tie at 72, while random forest is slightly lower at 67.
+
+-   **False Positives (FP):** The full logistic has the fewest (24). Random Forest (28) and reduced logistic (29) are slightly higher.
+
+-   **Correct Negatives (TN):** The full logistic also has the highest TN (237) compared to 233 (RF) and 232 (reduced logistic).
+
+-   **False Negatives (FN):** Full and reduced logistic tie at 51, while random forest has 56.
+
+#### **Possible Interpretation**
+
+-   The **full logistic model** appears to slightly outperform the other two in terms of having fewer false positives and more correct negatives.
+
+-   The **reduced logistic model** has basically the same capacity for identifying positives (same TP and FN as full logistic) but at the cost of slightly higher false positives and fewer correct negatives.
+
+-   The **random forest** has a bit lower sensitivity (fewer true positives), leading to more false negatives. It’s roughly in line with the logistic models on correct negatives and false positives.
+
+### G. Using the results of f, is there one of the 3 methods which appears
+
+best in modeling new results, or does it depend on whether it is more important to identify positives (predict diabetes) or negatives (predict health)
+
+#### Best at Predicting Positives (Diabetes)
+
+-   **Full Logistic** and **Reduced Logistic** both identify **72** true positives, missing **51** (FN).
+
+-   **Random Forest** detects **67** true positives but misses **56**, so it is slightly worse at catching diabetes cases.
+
+**Interpretation:**\
+If your priority is to **minimize false negatives** (i.e., ensure most diabetics are correctly identified), either **Full** or **Reduced Logistic** is preferable, since both capture more positives than Random Forest.
+
+#### Best at Predicting Negatives (No Diabetes)
+
+-   **Full Logistic** has the **fewest false positives** (**24**) and the **most true negatives** (**237**).
+
+-   **Reduced Logistic** and **Random Forest** each allow a bit more “over-diagnosis,” with higher FP (29 and 28, respectively) and fewer TN (232 and 233).
+
+**Interpretation:**\
+If your priority is to **minimize false positives** (avoid incorrectly labeling healthy individuals as diabetic), **Full Logistic** does the best job. It yields the highest count of correctly identified negatives and the lowest count of false alarms.
+
+### Summary
+
+-   **Positives (diabetes):** The two logistic models are tied for best.
+
+-   **Negatives (health):** Full Logistic edges out the other two.
+
+No single model dominates across **all** metrics, so your choice depends on whether catching as many diabetic cases as possible (reducing FN) or avoiding false alarms (reducing FP) is more important.
+
+### H. Now redo analysis twice using random selection of 384 out of 768 for
+
+training and the complement for testing. Is there anything you can conclude with this additional information about the merits of each approach?
+
+```{r}
+# We'll wrap each random partition in a loop to perform the entire analysis twice.
+for (i in 1:2) {
+  cat("\n============================\n")
+  cat("     RANDOM SPLIT RUN", i, "\n")
+  cat("============================\n\n")
+  
+  # 1. Randomly sample 384 observations for training
+  set.seed(123 + i)  # Change seed each run for variability
+  train_indices <- sample(seq_len(nrow(diabetes)), size = 384)
+  
+  # Prepare train/test data
+  random_train_data <- diabetes[train_indices, ]
+  random_test_data  <- diabetes[-train_indices, ]
+  
+  # Make sure 'Outcome' is a factor for randomForest classification
+  random_train_data$Outcome <- factor(random_train_data$Outcome)
+  random_test_data$Outcome  <- factor(random_test_data$Outcome)
+  
+  # 2. FULL logistic model on random_train_data
+  full_model_random <- glm(Outcome ~ ., data = random_train_data, family = binomial)
+  
+  # 3. BACKWARD SELECTION to get final reduced model
+  current_model_random <- full_model_random
+  repeat {
+    model_summary_rand <- summary(current_model_random)
+    p_vals <- coef(model_summary_rand)[, "Pr(>|z|)"]
+    p_vals <- p_vals[names(p_vals) != "(Intercept)"]
+    
+    max_p_rand <- max(p_vals)
+    if (max_p_rand < 0.05) {
+      break  # all p-values < 0.05
+    }
+    # Remove the predictor with the largest p-value
+    predictor_to_remove_rand <- names(p_vals)[which.max(p_vals)]
+    new_form_rand <- update(formula(current_model_random), paste(". ~ . -", predictor_to_remove_rand))
+    current_model_random <- glm(new_form_rand, data = random_train_data, family = binomial)
+  }
+  # current_model_random is now the reduced logistic after backward selection
+  
+  # 4. RANDOM FOREST on random_train_data
+  rf_model_random <- randomForest(
+    Outcome ~ .,
+    data = random_train_data,
+    importance = TRUE
+  )
+  
+  # 5. Generate TEST PREDICTIONS for all three models:
+  #    (a) Full logistic
+  test_probs_full <- predict(full_model_random, newdata = random_test_data, type = "response")
+  test_class_full <- factor(ifelse(test_probs_full > 0.5, "1", "0"), levels = c("0","1"))
+  
+  #    (b) Reduced logistic
+  test_probs_reduced <- predict(current_model_random, newdata = random_test_data, type = "response")
+  test_class_reduced <- factor(ifelse(test_probs_reduced > 0.5, "1", "0"), levels = c("0","1"))
+  
+  #    (c) Random Forest
+  test_class_rf <- predict(rf_model_random, newdata = random_test_data, type = "class")
+  
+  # 6. Confusion matrix stats (TP, FP, TN, FN) for each model
+  truth_rand <- random_test_data$Outcome
+  full_stats_rand    <- get_confusion_stats(test_class_full, truth_rand)
+  reduced_stats_rand <- get_confusion_stats(test_class_reduced, truth_rand)
+  rf_stats_rand      <- get_confusion_stats(test_class_rf, truth_rand)
+  
+  # Combine into a results table
+  results_rand <- data.frame(
+    Model = c("Full Logistic", "Reduced Logistic", "Random Forest"),
+    TP = c(full_stats_rand["TP"], reduced_stats_rand["TP"], rf_stats_rand["TP"]),
+    FP = c(full_stats_rand["FP"], reduced_stats_rand["FP"], rf_stats_rand["FP"]),
+    TN = c(full_stats_rand["TN"], reduced_stats_rand["TN"], rf_stats_rand["TN"]),
+    FN = c(full_stats_rand["FN"], reduced_stats_rand["FN"], rf_stats_rand["FN"])
+  )
+  
+  # Print everything for this run
+  cat("Full Logistic Model (Random Split", i, ") Summary:\n")
+  print(summary(full_model_random))
+  
+  cat("\nReduced Logistic Model (Random Split", i, ") Summary:\n")
+  print(summary(current_model_random))
+  
+  cat("\nRandom Forest Model (Random Split", i, "):\n")
+  print(rf_model_random)
+  
+  cat("\nConfusion Stats on the Test Set (Random Split", i, "):\n")
+  print(results_rand)
+  
+  cat("\n--------------------------------------------------------------\n")
+}
+
+```
+
+1.  **Model Rankings Can Change**
+
+    -   In the first random split, Random Forest had the highest TP but also the highest FP.
+
+    -   In the second random split, Full Logistic and Random Forest tied in TP and FN, but their FP differed slightly.
+
+2.  **Full vs. Reduced Logistic**
+
+    -   As before, these two models remain close in performance, typically sharing similar TP/FN counts. Sometimes the Reduced model gets marginally fewer TPs.
+
+3.  **Random Forest Variation**
+
+    -   Sometimes it identifies more positives, but at the cost of more false positives. Other times, it ties with Full Logistic in TPs and FPs. This indicates the **RF** can fluctuate based on the training sample composition.
+
+4.  **Merits of Each Approach**
+
+    -   **Full Logistic** tends to have stable performance with moderately low FP and a solid number of TPs.
+
+    -   **Reduced Logistic** stays comparable, occasionally trading off a few TPs for marginally fewer FPs.
+
+    -   **Random Forest** can do better on positives in one split and tie with logistic in another, but it may produce more FP or FN depending on how the data is distributed.
+
+**Overall Takeaway:\
+**Repeating the analysis with different random splits highlights that each method’s performance can **vary** with different training subsets. No method uniformly dominates; small shifts in the training data sometimes favor the logistic models, other times favor the random forest. This underscores the importance of **repeated training/testing** (or cross-validation) to gauge consistent patterns in model performance, rather than relying on a single train/test split.
+
+## Question 6
+
+A likelihood ratio test is a **frequentist** procedure that compares how well each hypothesis explains the observed data relative to a threshold chosen by a fixed significance level. It **does not** use prior probabilities—its decision is based solely on how likely the data are under each hypothesis. By contrast, **Bayes’ rule** explicitly **updates prior odds** (initial beliefs about H_0 vs H_1) using the likelihood ratio, producing **posterior odds** that combine both evidence from the data and the prior. This allows the Bayesian approach to incorporate existing knowledge, whereas the LRT focuses on data-driven decision-making under repeated sampling assumptions.

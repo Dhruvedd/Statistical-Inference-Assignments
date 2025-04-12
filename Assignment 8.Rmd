@@ -1,0 +1,338 @@
+---
+title: "Assignment_8"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-12-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Group Members: Dhruv Daiya, Raj Kapadia, Bansari Mehta, Dhruvi Patel
+
+```{r}
+# Load necessary libraries
+library(randomForest)
+library(caret)
+
+# Load dataset
+pulsar <- read.csv("D:\\Uni Resources\\Data Science\\Stats Inference\\A8\\pulsar.csv")
+pulsar <- pulsar[, -1]  # Remove unnecessary columns
+pulsar$v9 <- as.factor(pulsar$v9)  # Convert target variable to factor
+
+# Separate classes
+pulsar_base <- pulsar[pulsar$v9 == 0, ]
+pulsar_true <- pulsar[pulsar$v9 == 1, ]
+
+# Function to print results and confusion matrix
+print_results <- function(conf_mat, sample_size, method) {
+  cat("\nAnalysis for", method, "sampling with sample size:", sample_size, "\n")
+  cat("---------------------------------------------------\n")
+  print(conf_mat$table)  # Confusion Matrix
+  cat("\nMetrics:\n")
+  cat("Accuracy:", conf_mat$overall["Accuracy"], "\n")
+  cat("Sensitivity (Recall):", conf_mat$byClass["Sensitivity"], "\n")
+  cat("Specificity:", conf_mat$byClass["Specificity"], "\n")
+  cat("Precision:", conf_mat$byClass["Precision"], "\n")
+  cat("F1 Score:", conf_mat$byClass["F1"], "\n")
+  cat("---------------------------------------------------\n")
+}
+
+# Function to perform analysis for a given sample size
+perform_analysis <- function(sample_size) {
+  set.seed(123)
+  base_indices <- sample(nrow(pulsar_base), sample_size)
+  true_indices <- sample(nrow(pulsar_true), sample_size)
+  
+  # Even sampling
+  pulsar_even <- rbind(pulsar_base[base_indices, ], pulsar_true[true_indices, ])
+  
+  # Proportional sampling
+  prop_base_indices <- sample(nrow(pulsar_base), sample_size * 10)
+  pulsar_prop <- rbind(pulsar_base[prop_base_indices, ], pulsar_true[true_indices, ])
+  
+  # Logistic regression
+  logit_even <- glm(v9 ~ ., data = pulsar_even, family = binomial(link = "logit"))
+  logit_prop <- glm(v9 ~ ., data = pulsar_prop, family = binomial(link = "logit"))
+  
+  # Random forest
+  rf_even <- randomForest(v9 ~ ., data = pulsar_even, ntree = 5000)
+  rf_prop <- randomForest(v9 ~ ., data = pulsar_prop, ntree = 5000)
+  
+  # Predictions and confusion matrices
+  results <- list(
+    logit_even = confusionMatrix(as.factor(as.numeric(predict(logit_even, pulsar, type = "response") > 0.5)), pulsar$v9),
+    logit_prop = confusionMatrix(as.factor(as.numeric(predict(logit_prop, pulsar, type = "response") > 0.5)), pulsar$v9),
+    rf_even = confusionMatrix(as.factor(as.numeric(predict(rf_even, pulsar, type = "prob")[, 2] > 0.5)), pulsar$v9),
+    rf_prop = confusionMatrix(as.factor(as.numeric(predict(rf_prop, pulsar, type = "prob")[, 2] > 0.5)), pulsar$v9)
+  )
+  
+  # Print results
+  print_results(results$logit_even, sample_size, "Logistic Regression - Even")
+  print_results(results$logit_prop, sample_size, "Logistic Regression - Proportional")
+  print_results(results$rf_even, sample_size, "Random Forest - Even")
+  print_results(results$rf_prop, sample_size, "Random Forest - Proportional")
+}
+
+# Function for extra credit task
+perform_extra_credit <- function(sample_size) {
+  base_indices <- sample(nrow(pulsar_base), sample_size)
+  true_indices <- sample(nrow(pulsar_true), sample_size)
+  
+  pulsar_even <- rbind(pulsar_base[base_indices, ], pulsar_true[true_indices, ])
+  pulsar_even$v9 <- as.numeric(as.character(pulsar_even$v9))
+  
+  rf_extra <- randomForest(v9 ~ ., data = pulsar_even, ntree = 5000)
+  p2_extra <- predict(rf_extra, pulsar, type = "response")
+  
+  results <- confusionMatrix(as.factor(as.numeric(p2_extra > 0.5)), pulsar$v9)
+  
+  cat("\nExtra Credit Analysis for sample size:", sample_size, "\n")
+  cat("---------------------------------------------------\n")
+  print(results$table)  # Confusion Matrix
+  cat("\nMetrics:\n")
+  cat("Accuracy:", results$overall["Accuracy"], "\n")
+  cat("Sensitivity (Recall):", results$byClass["Sensitivity"], "\n")
+  cat("Specificity:", results$byClass["Specificity"], "\n")
+  cat("---------------------------------------------------\n")
+}
+
+# Analyze for each sample size
+sample_sizes <- c(100, 200, 300, 400)
+
+for (size in sample_sizes) {
+  perform_analysis(size)
+  perform_extra_credit(size)
+}
+```
+
+## 100 Samples Analysis
+
+### Logistic Regression (Even Sampling):
+
+\- Achieves 96.47% accuracy
+
+\- High precision at 99.00%
+
+\- Sensitivity of 97.10%
+
+\- Demonstrates robust performance with balanced metrics
+
+### Logistic Regression (Proportional Sampling):
+
+\- Improved accuracy to 97.78%
+
+\- Precision at 97.96%
+
+\- Exceptional sensitivity of 99.64%
+
+\- Shows superior performance compared to even sampling
+
+### Random Forest (Even Sampling):
+
+\- Lower accuracy at 93.62%
+
+\- High precision of 99.08%
+
+\- Sensitivity of 93.85%
+
+\- Demonstrates more variable performance
+
+### Random Forest (Proportional Sampling):
+
+\- Significantly improved accuracy at 97.86%
+
+\- Precision at 98.04%
+
+\- Very high sensitivity of 99.64%
+
+\- Matches logistic regression performance
+
+### Performance Variability:
+
+\- Proportional sampling consistently outperforms even sampling
+
+\- Substantial improvement in accuracy for both models
+
+\- Logistic regression shows more consistent initial performance
+
+\- Random forest displays higher sensitivity to sampling method
+
+## 200 Samples Analysis
+
+### Logistic Regression (Even Sampling):
+
+\- Accuracy slightly decreases to 96.26%
+
+\- Precision remains high at 98.99%
+
+\- Sensitivity at 96.87%
+
+\- Shows slight performance variability from 100 samples
+
+### Logistic Regression (Proportional Sampling):
+
+\- Accuracy increases to 97.95%
+
+\- Precision at 98.30%
+
+\- Exceptional sensitivity of 99.46%
+
+\- Continues to demonstrate strong predictive power
+
+### Random Forest (Even Sampling):
+
+\- Accuracy at 96.11%
+
+\- High precision of 99.07%
+
+\- Sensitivity of 96.63%
+
+\- Maintains consistent performance from 100 samples
+
+### Random Forest (Proportional Sampling):
+
+\- Peak accuracy at 98.02%
+
+\- Precision at 98.54%
+
+\- Very high sensitivity of 99.29%
+
+\- Shows most stable performance
+
+### Performance Variability:
+
+\- Continued strong performance with proportional sampling
+
+\- Minimal performance differences between models
+
+\- Both models show high accuracy and sensitivity
+
+\- Consistent improvement with larger sample size
+
+## 300 Samples Analysis
+
+### Logistic Regression (Even Sampling):
+
+\- Achieves 95.97% accuracy
+
+\- High precision at 99.10%
+
+\- Sensitivity of 96.44%
+
+\- Demonstrates robust performance with balanced metrics
+
+### Logistic Regression (Proportional Sampling):
+
+\- Improved accuracy to 97.91%
+
+\- Precision at 98.27%
+
+\- Exceptional sensitivity of 99.45%
+
+\- Shows superior performance compared to even sampling
+
+### Random Forest (Even Sampling):
+
+\- Lower accuracy at 94.75%
+
+\- High precision of 99.22%
+
+\- Sensitivity of 94.97%
+
+\- Demonstrates more variable performance
+
+### Random Forest (Proportional Sampling):
+
+\- Significantly improved accuracy at 98.32%
+
+\- Precision at 98.74%
+
+\- Very high sensitivity of 99.42%
+
+\- Approaches logistic regression performance
+
+## 400 Samples Analysis
+
+### Logistic Regression (Even Sampling):
+
+\- Achieves 97.04% accuracy
+
+\- High precision at 99.03%
+
+\- Sensitivity of 97.70%
+
+\- Shows modest improvement with increased sample size
+
+### Logistic Regression (Proportional Sampling):
+
+\- Maintains high accuracy at 97.92%
+
+\- Precision at 98.27%
+
+\- Exceptional sensitivity of 99.46%
+
+\- Consistent top-tier performance
+
+### Random Forest (Even Sampling):
+
+\- Improved accuracy at 96.41%
+
+\- High precision of 99.22%
+
+\- Sensitivity of 96.81%
+
+\- Demonstrates gradual performance enhancement
+
+### Random Forest (Proportional Sampling):
+
+\- Significantly improved accuracy at 98.44%
+
+\- Precision at 98.78%
+
+\- Very high sensitivity of 99.51%
+
+\- Matches logistic regression performance
+
+## Comprehensive Insights
+
+### Key Observations:
+
+\- Proportional sampling consistently outperforms even sampling
+
+\- Both logistic regression and random forest show high predictive power
+
+\- Sensitivity and precision remain consistently high
+
+\- Sample size increase does not significantly impact model performance
+
+### Performance Trends:
+
+**1. Sampling Method Impact:**
+
+   - Proportional sampling consistently improves model performance
+
+   - Even sampling shows more variable and generally lower performance
+
+**2. Model Comparison:**
+
+   - Logistic Regression demonstrates more consistent initial performance
+
+   - Random Forest shows higher sensitivity to sampling methodology
+
+   - Both models converge to similar high-performance metrics with proportional sampling
+
+**3. Metric Stability:**
+
+   - Precision remains high across all sample sizes and sampling methods (98-99%)
+
+   - Sensitivity shows significant improvement with proportional sampling
+
+   - Accuracy shows consistent improvement with proportional sampling
+
+## Conclusion:
+
+The analysis clearly demonstrates the superiority of proportional sampling across different sample sizes and machine learning models. Both logistic regression and random forest exhibit high predictive power, with proportional sampling consistently improving model performance. The stable precision and increasingly high sensitivity suggest a robust and reliable approach to model training.\
+\

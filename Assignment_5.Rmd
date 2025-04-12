@@ -1,0 +1,240 @@
+---
+title: "Assigment_5"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+date: "2024-11-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment 5 by Raj Kapadia, Dhruv Daiya, Bansari Mehta, Dhruvi Patel
+
+Loading the required libraries and packages
+
+```{r}
+library(ISLR)
+
+source("D:\\Uni Resources\\Data Science\\Stats Inference\\A5\\regboot1.pck")
+source('D:\\Uni Resources\\Data Science\\Stats Inference\\A5\\regday2.pck')
+source('D:\\Uni Resources\\Data Science\\Stats Inference\\A5\\fixregday1.pck')
+
+weather <- NOAAGISSWD
+default <- Default
+
+```
+
+Running the logitboot function on the Wildfires
+
+```{r}
+logitboot(Wildfire.Count~delta.temp, weather, 5000)
+```
+
+No zeroes present in this
+
+```{r}
+ logitboot(Wildfire.Count~Year, weather, 5000)
+
+```
+
+No zeroes present in this
+
+```{r}
+ logitboot(Wildfire.Count~I(Year + delta.temp), weather, 5000)
+
+```
+
+No zeroes present in this
+
+```{r}
+ logitboot(Wildfire.Count~I(Year * delta.temp), weather, 5000)
+```
+
+No zeroes present in this
+
+```{r}
+ logitboot(Wildfire.Count~I(Year^2), weather, 5000)
+
+```
+
+No zeroes present in this
+
+```{r}
+ logitboot(Wildfire.Count~I(delta.temp^2), weather, 5000)
+
+```
+
+No zeroes present in this
+
+```{r}
+logitboot(Wildfire.Count~delta.temp + Year + I(delta.temp * Year) + I(delta.temp^2) + I(Year^2), weather, 5000)
+```
+
+Since there were a lot of warnings while running the above function, there is a possibility of having zeroes in them
+
+Now running the same logitboot function but on Drought.Count
+
+```{r}
+ logitboot(Drought.Count~delta.temp, weather, 5000)
+
+```
+
+There might be zeroes in this function
+
+```{r}
+ logitboot(Drought.Count~Year, weather, 5000)
+
+```
+
+There might be zeroes when using this function
+
+```{r}
+ logitboot(Drought.Count~Year + delta.temp, weather, 5000)
+
+```
+
+There are zeroes when this function is used
+
+```{r}
+ logitboot(Drought.Count~I(Year * delta.temp), weather, 5000)
+
+```
+
+This function has no zeroes when implemented
+
+```{r}
+ logitboot(Drought.Count~I(Year^2), weather, 5000)
+
+```
+
+No zeroes when this function is used
+
+```{r}
+ logitboot(Drought.Count~I(delta.temp^2), weather, 5000)
+
+```
+
+Since there were error messages when this function was used, this indicates the possible presence of zeroes when this function is used
+
+```{r}
+ logitboot(Drought.Count~delta.temp + Year + I(delta.temp * Year) + I(delta.temp^2) + I(Year^2), weather, 5000)
+```
+
+Since there were lot of warning messages, there is a possibility of there being zeroes upon using this function
+
+For Drought.Count only the graphs of Year \* Delta and Year\^2 had no zeroes present in their intercepts, and out of those two Year \^2 had the lowest AIC.
+
+**Now computing the Severe Storm Count by implementing lmboot function on them**
+
+```{r}
+ lmboot(Severe.Storm.Count~delta.temp, weather, 5000)
+
+```
+
+This is a usable model since there are no zeroes present when using this function, which gives a PRESS of 308.5 on 95% Confidence interval
+
+```{r}
+ lmboot(Severe.Storm.Count~Year, weather, 5000)
+```
+
+This is also a usable model since there are no zeroes present when using this function, which gives a PRESS of 278.5 on 95% Confidence interval.
+
+```{r}
+ lmboot(Severe.Storm.Count~I(Year + delta.temp), weather, 5000)
+
+```
+
+This is also a usable model since there are no zeroes present when using this function, which gives a PRESS of 277.4 on 95% Confidence interval.
+
+```{r}
+ lmboot(Severe.Storm.Count~I(Year * delta.temp), weather, 5000)
+
+```
+
+This is also a usable model since there are no zeroes present when using this function, which gives a PRESS of 304.3 on 95% Confidence interval.
+
+```{r}
+ lmboot(Severe.Storm.Count~I(Year^2), weather, 5000)
+
+```
+
+This is also a usable model since there are no zeroes present when using this function, which gives a PRESS of 276.8 on 95% Confidence interval.
+
+```{r}
+ lmboot(Severe.Storm.Count~I(delta.temp^2), weather, 5000)
+
+```
+
+This is also a usable model since there are no zeroes present when using this function, which gives a PRESS of 277.5 on 95% Confidence interval.
+
+```{r}
+ lmboot(Severe.Storm.Count~Year + delta.temp + I(Year^2) + I(delta.temp^2), weather, 5000)
+
+```
+
+This is not a usable function, since upon running it against Severe Storm Count, there are zeroes present which gives the PRESS of 154.8 on 95% Confidence interval.
+
+```{r}
+lmboot(Severe.Storm.Count~Year + delta.temp + I(delta.temp*Year) + I(Year^2) + I(delta.temp^2), weather, 5000)
+```
+
+This is not a usable function, since upon running it against Severe Storm Count, there are zeroes present which gives the PRESS of 143.6 on 95% Confidence interval.
+
+Running the lmboot model on All Disasters
+
+```{r}
+ lmboot(All.Disasters.Count ~ delta.temp, weather, 5000)
+
+```
+
+This is not a usable model, since when ran against All Disasters Count, there is zero present, which gives us a PRESS of 651.2 on 95% Confidence interval.
+
+```{r}
+ lmboot(All.Disasters.Count ~ Year, weather, 5000)
+
+```
+
+This is a usable model, since when upon implementing this function, there were no zeroes present, which gave us a PRESS of 597.2 on 95% Confidence interval.
+
+```{r}
+ lmboot(All.Disasters.Count ~ I(Year + delta.temp), weather, 5000)
+
+```
+
+This is a usable model, since when upon implementing this function, there were no zeroes present, which gave us a PRESS of 594.8 on 95% Confidence interval.
+
+```{r}
+ lmboot(All.Disasters.Count ~ I(Year * delta.temp), weather, 5000)
+
+```
+
+This is not a usable model, since when ran against All Disasters Count, there is zero present, which gives us a PRESS of 643.3 on 95% Confidence interval.
+
+```{r}
+ lmboot(All.Disasters.Count ~ I(Year^2), weather, 5000)
+
+```
+
+This is a usable model, since when upon implementing this function, there were no zeroes present, which gave us a PRESS of 594.2 on 95% Confidence interval.
+
+```{r}
+ lmboot(All.Disasters.Count ~ I(delta.temp^2), weather, 5000)
+
+```
+
+This is a usable model, since when upon implementing this function, there were no zeroes present, which gave us a PRESS of 492.6 on 95% Confidence interval.
+
+```{r}
+ lmboot(All.Disasters.Count ~ Year + delta.temp + I(delta.temp*Year) + I(Year^2) + I(delta.temp^2), weather, 5000)
+```
+
+This is not a usable model, since when ran against All Disasters Count, there is zero present, which gives us a PRESS of 333.7 on 95% Confidence interval.
+
+There were many models that were usable for comparing against Severe Storm and All Disaster. There were some functions that even after removing 1 from them, they still didn't work.
+
+The lowest PRESS for Severe Storm 143.6 when used (Year + delta.temp + I(delta.temp\*Year) + I(Year\^2) + I(delta.temp\^2), weather, 5000)
+
+The lowesr PRESS for All Disaster Count was 492.6 which was obtained from (Temperature \^2)
